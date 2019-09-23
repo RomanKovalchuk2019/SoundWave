@@ -165,12 +165,14 @@ public class AudioVisualizationView: BaseNibView {
 
 	public func play(from url: URL) {
 		guard self.audioVisualizationMode == .read else {
-			fatalError("trying to read audio visualization in write mode")
+			print("trying to read audio visualization in write mode")
+            return
 		}
 
 		AudioContext.load(fromAudioURL: url) { audioContext in
 			guard let audioContext = audioContext else {
-				fatalError("Couldn't create the audioContext")
+				print("Couldn't create the audioContext")
+                return
 			}
 			self.meteringLevels = audioContext.render(targetSamples: 100)
 			self.play(for: 2)
@@ -179,11 +181,13 @@ public class AudioVisualizationView: BaseNibView {
 
 	public func play(for duration: TimeInterval) {
 		guard self.audioVisualizationMode == .read else {
-			fatalError("trying to read audio visualization in write mode")
+            print("trying to read audio visualization in write mode")
+            return
 		}
 
 		guard self.meteringLevels != nil else {
-			fatalError("trying to read audio visualization of non initialized sound record")
+			print("trying to read audio visualization of non initialized sound record")
+            return
 		}
 
 		if let currentChronometer = self.playChronometer {
@@ -211,7 +215,8 @@ public class AudioVisualizationView: BaseNibView {
 
 	public func pause() {
 		guard let chronometer = self.playChronometer, chronometer.isPlaying else {
-			fatalError("trying to pause audio visualization view when not playing")
+			print("trying to pause audio visualization view when not playing")
+            return
 		}
 		self.playChronometer?.pause()
 	}
@@ -258,42 +263,45 @@ public class AudioVisualizationView: BaseNibView {
 
 		context.saveGState()
 
-		let startPoint = CGPoint(x: 0.0, y: self.centerY)
 		var endPoint = CGPoint(x: self.xLeftMostBar() + self.meteringLevelBarWidth, y: self.centerY)
 
 		if let gradientPercentage = self.currentGradientPercentage {
 			endPoint = CGPoint(x: self.frame.size.width * CGFloat(gradientPercentage), y: self.centerY)
 		}
-
-		let colorSpace = CGColorSpaceCreateDeviceRGB()
-		let colorLocations: [CGFloat] = [0.0, 1.0]
-		let colors = [self.gradientStartColor.cgColor, self.gradientEndColor.cgColor]
-
-		let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: colorLocations)
-
-		context.drawLinearGradient(gradient!, start: startPoint, end: endPoint, options: CGGradientDrawingOptions(rawValue: 0))
-
+        
 		context.restoreGState()
-
-		if self.currentGradientPercentage != nil {
-			self.drawPlainBackground(inContext: context, fillFromXCoordinate: endPoint.x)
+        
+        if self.audioVisualizationMode == .write {
+            self.drawPlainBackground(inContext: context, color: gradientEndColor, fillFromXCoordinate: 0)
+        }
+		else if self.currentGradientPercentage != nil {
+             self.drawPlainBackground(inContext: context, color: gradientEndColor, fillFromXCoordinate: 0, fillToXCoordinate: endPoint.x)
+            self.drawPlainBackground(inContext: context, color: gradientStartColor, fillFromXCoordinate: endPoint.x)
 		}
+        else {
+             self.drawPlainBackground(inContext: context, color: gradientStartColor, fillFromXCoordinate: 0)
+        }
 	}
 
-	private func drawPlainBackground(inContext context: CGContext, fillFromXCoordinate xCoordinate: CGFloat) {
+	private func drawPlainBackground(
+        inContext context: CGContext,
+        color: UIColor,
+        fillFromXCoordinate xCoordinate: CGFloat,
+        fillToXCoordinate toXCoordinate: CGFloat? = nil
+        ) {
 		context.saveGState()
 
 		let squarePath = UIBezierPath()
 
 		squarePath.move(to: CGPoint(x: xCoordinate, y: 0.0))
-		squarePath.addLine(to: CGPoint(x: self.frame.size.width, y: 0.0))
-		squarePath.addLine(to: CGPoint(x: self.frame.size.width, y: self.frame.size.height))
+		squarePath.addLine(to: CGPoint(x: toXCoordinate ?? self.frame.size.width, y: 0.0))
+		squarePath.addLine(to: CGPoint(x: toXCoordinate ?? self.frame.size.width, y: self.frame.size.height))
 		squarePath.addLine(to: CGPoint(x: xCoordinate, y: self.frame.size.height))
 
 		squarePath.close()
 		squarePath.addClip()
 
-		self.gradientStartColor.setFill()
+		color.setFill()
 		squarePath.fill()
 
 		context.restoreGState()
