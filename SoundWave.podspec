@@ -27,6 +27,8 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '10.0'
   s.source_files = 'SoundWave/*.swift', 'SoundWave/Classes/**/*.swift'
   
+  s.dependency "RxSwift", "~> 5"
+
   # s.resource_bundles = {
   #   'SoundWave' => ['SoundWave/Assets/*.png']
   # }
